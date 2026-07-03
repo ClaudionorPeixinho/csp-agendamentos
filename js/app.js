@@ -34,6 +34,7 @@ let crudContext = {};
 let loginRole = 'hairdresser';
 
 function init() {
+    if (typeof initSupabase === 'function') initSupabase();
     loadDB();
     renderLogos();
     renderFilters();
@@ -71,10 +72,37 @@ function loadDB() {
     if (!DB.freeUsers) DB.freeUsers = [];
     DB.services.forEach(s => { if (s.hairdresserId === undefined) s.hairdresserId = null; });
     saveDB();
+    // Tenta carregar dados do Supabase em segundo plano
+    if (typeof loadAllFromSupabase === 'function') {
+        loadAllFromSupabase().then(synced => {
+            if (synced) {
+                saveDB();
+                if (typeof subscribeToChanges === 'function') subscribeToChanges();
+                renderCatalog();
+                updateStats();
+                if (currentUser) {
+                    const activeTab = document.querySelector('.dash-tab.active');
+                    if (activeTab && typeof switchDashTab === 'function') {
+                        switchDashTab(localStorage.getItem('csp_current_tab') || 'my-appointments', activeTab);
+                    }
+                }
+            }
+        });
+    }
 }
 
 function saveDB() {
     try { localStorage.setItem('csp_db', JSON.stringify(DB)); } catch(e) {}
+    // Sincroniza com Supabase em segundo plano
+    if (typeof syncTableToSupabase === 'function') {
+        syncTableToSupabase('admin_config', [DB.admin]);
+        syncTableToSupabase('hairdressers', DB.hairdressers);
+        syncTableToSupabase('services', DB.services);
+        syncTableToSupabase('appointments', DB.appointments);
+        syncTableToSupabase('transactions', DB.transactions);
+        syncTableToSupabase('portfolio', DB.portfolio);
+        syncTableToSupabase('free_users', DB.freeUsers);
+    }
 }
 
 function showView(id) {
@@ -476,6 +504,7 @@ function renderDashboard() {
 function switchDashTab(tab, btn) {
     document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
+    if (typeof _currentTabName !== 'undefined') _currentTabName = tab;
     const content = document.getElementById('dashContent');
 
     if (tab === 'my-appointments') renderMyAppointments(content);
@@ -527,7 +556,7 @@ function renderMyAppointments(container) {
         const apptMsg = 'Olá ' + a.clientName + '!\n\nGostaria de lembrar do seu agendamento:\n📅 ' + ds + '\n⏰ ' + a.time + '\n💇 ' + (s?s.name:'') + '\n\n📍 Chegar com 10 minutos de antecedência!';
         html += '<div class="agenda-card fade-in">' +
             '<div class="ci"><h4>' + a.clientName + '</h4><p><i class="fas fa-phone"></i> ' + a.clientPhone + (a.clientEmail ? ' &bull; ' + a.clientEmail : '') + '</p></div>' +
-            '<div style="text-align:center;"><div class="at">' + ds + ' • ' + a.time + '</div><div class="as">' + (s?s.name:'') + (a.notes?'<br><small style="color:var(--text3)">Obs: '+a.notes+'</small>':'') + '</div></div>' +
+            '<div style="text-align:center;"><div class="at">' + ds + ' • ' + a.time + '</div><div class="as">' + (s?s.name:'') + (a.notes?'<br><small style="color:var(--text3)">Obs: '+a.notes+'</small>':'') + (a.status==='completed' && a.paymentMethod ? '<br><small style="color:var(--gold);font-weight:600;">R$ '+(s?s.price.toFixed(2):'')+' • '+a.paymentMethod+'</small>' : '') + '</div></div>' +
             '<div style="display:flex;align-items:center;gap:6px;">' +
             (a.clientPhone ? '<button class="btn-sm" style="border-color:#25D366;color:#25D366;" onclick="openWhatsApp(\''+a.clientPhone+'\',\''+apptMsg.replace(/'/g,"\\'")+'\')"><i class="fab fa-whatsapp"></i></button>' : '') +
             '<span class="status ' + statusClass + '">' + a.status + '</span>' +
@@ -573,6 +602,12 @@ function openManualBooking() {
         const sId = parseInt(document.getElementById('mbService').value);
         const notes = document.getElementById('mbNotes').value.trim();
         if (!name || !phone || !date || !time) { showToast('Preencha nome, telefone, data e horário.', 'error'); return; }
+
+        const conflict = DB.appointments.some(a =>
+            a.hairdresserId === currentUser.id && a.date === date && a.time === time &&
+            (a.status === 'confirmed' || a.status === 'completed')
+        );
+        if (conflict) { showToast('Este horário já está agendado.', 'error'); return; }
 
         DB.appointments.push({
             id: Date.now(),
@@ -843,8 +878,8 @@ function togglePortfolio(id, val) {
 }
 
 /* === MY FINANCE === */
-const PAYMENT_METHODS = ['Dinheiro', 'Cartão Crédito', 'Cartão Débito', 'Pix', 'Transferência'];
-let financeFilter = { day: '', month: '', year: '' };
+const PAYMENT_METHODS = ['Pix', 'Dinheiro', 'Transferência Bancária', 'Fiado', 'Cartão Crédito', 'Cartão Débito'];
+let financeFilter = { day: '', month: '', year: '', payment: '' };
 
 function renderMyFinance(container) {
     const hId = currentUser.id;
@@ -859,6 +894,9 @@ function renderMyFinance(container) {
     }
     if (financeFilter.day) {
         trans = trans.filter(t => t.date.slice(8,10) === financeFilter.day.padStart(2,'0'));
+    }
+    if (financeFilter.payment) {
+        trans = trans.filter(t => t.paymentMethod === financeFilter.payment);
     }
 
     const incomes = trans.filter(t => t.type === 'income');
@@ -890,7 +928,11 @@ function renderMyFinance(container) {
         <select id="fYear" onchange="financeFilter.year=this.value;financeFilter.day='';financeFilter.month='';renderMyFinance(document.getElementById('dashContent'))" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:.8rem;">
           <option value="">Todos</option>${years.map(y => '<option value="'+y+'"'+(financeFilter.year===y?' selected':'')+'>'+y+'</option>').join('')}
         </select></div>
-      ${(financeFilter.day||financeFilter.month||financeFilter.year) ? '<button onclick="financeFilter={day:\'\',month:\'\',year:\'\'};renderMyFinance(document.getElementById(\'dashContent\'))" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--rs);padding:6px 12px;font-size:.8rem;cursor:pointer;"><i class="fas fa-times"></i> Limpar</button>' : ''}
+      <div style="display:flex;flex-direction:column;gap:2px;"><label style="font-size:.65rem;color:var(--text3);text-transform:uppercase;">Pagamento</label>
+        <select id="fPayment" onchange="financeFilter.payment=this.value;renderMyFinance(document.getElementById('dashContent'))" style="background:var(--bg2);color:var(--text);border:1px solid var(--border);border-radius:var(--rs);padding:6px 10px;font-size:.8rem;">
+          <option value="">Todas</option>${PAYMENT_METHODS.map(p => '<option value="'+p+'"'+(financeFilter.payment===p?' selected':'')+'>'+p+'</option>').join('')}
+        </select></div>
+      ${(financeFilter.day||financeFilter.month||financeFilter.year||financeFilter.payment) ? '<button onclick="financeFilter={day:\'\',month:\'\',year:\'\',payment:\'\'};renderMyFinance(document.getElementById(\'dashContent\'))" style="background:transparent;border:1px solid var(--border);color:var(--text2);border-radius:var(--rs);padding:6px 12px;font-size:.8rem;cursor:pointer;"><i class="fas fa-times"></i> Limpar</button>' : ''}
     </div>
     `;
 
@@ -1587,7 +1629,7 @@ function renderTimeSlots() {
         allSlots.push(hh + ':' + mm);
     }
 
-    const booked = DB.appointments.filter(a => a.hairdresserId === hId && a.date === date && a.status === 'confirmed').map(a => a.time);
+    const booked = DB.appointments.filter(a => a.hairdresserId === hId && a.date === date && (a.status === 'confirmed' || a.status === 'completed')).map(a => a.time);
     const extraToday = extraSlots.filter(es => es.date === date).map(es => es.time);
 
     let lunchLabelAdded = false;
@@ -1663,6 +1705,33 @@ function submitBooking(e) {
     if (!time) { showToast('Selecione um horário disponível.', 'error'); return; }
     if (!name || !phone) { showToast('Preencha nome e telefone.', 'error'); return; }
 
+    // Verifica conflito de horário antes de confirmar
+    if (typeof checkTimeSlotAvailable === 'function') {
+        checkTimeSlotAvailable(hId, date, time).then(available => {
+            if (!available) {
+                showToast('Este horário já foi agendado por outro cliente. Selecione outro horário.', 'error');
+                renderTimeSlots();
+                return;
+            }
+            finalizeBooking(hId, sId, date, time, name, phone, email, notes);
+        });
+    } else {
+        finalizeBooking(hId, sId, date, time, name, phone, email, notes);
+    }
+}
+
+function finalizeBooking(hId, sId, date, time, name, phone, email, notes) {
+    // Dupla verificação de conflito (local)
+    const conflict = DB.appointments.some(a =>
+        a.hairdresserId === hId && a.date === date && a.time === time &&
+        (a.status === 'confirmed' || a.status === 'completed')
+    );
+    if (conflict) {
+        showToast('Este horário acabou de ser agendado. Selecione outro.', 'error');
+        if (typeof renderTimeSlots === 'function') renderTimeSlots();
+        return;
+    }
+
     const h = DB.hairdressers.find(h => h.id === hId);
     const s = DB.services.find(s => s.id === sId);
     const d = new Date(date + 'T00:00:00');
@@ -1702,31 +1771,98 @@ function updateApptStatus(id, status) {
     const a = DB.appointments.find(a => a.id === id);
     if (!a) return;
     if (status === 'cancelled' && !confirm('Cancelar agendamento de ' + a.clientName + '?')) return;
+    if (status === 'completed') {
+        openCompletePaymentModal(id);
+        return;
+    }
     a.status = status;
     saveDB();
+    renderApptsAfterUpdate();
+    if (status === 'cancelled' && a.clientPhone) cancelNotifyClient(a);
+    else showToast('Agendamento cancelado.', 'error');
+}
+
+function openCompletePaymentModal(apptId) {
+    const a = DB.appointments.find(a => a.id === apptId);
+    if (!a) return;
+    const s = DB.services.find(s => s.id === a.serviceId);
+    const m = document.getElementById('crudModal');
+    m.classList.add('open');
+    document.body.classList.add('no-scroll');
+    document.getElementById('crudTitle').textContent = 'Finalizar Agendamento';
+    document.getElementById('crudSub').textContent = a.clientName + ' — ' + (s?s.name:'') + ' — R$ ' + (s?s.price:0);
+    document.getElementById('crudFields').innerHTML = `
+        <input type="hidden" id="cpApptId" value="${apptId}">
+        <div class="form-group"><label>Forma de Pagamento</label>
+            <select id="cpPayment" style="width:100%;padding:12px 16px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);font-size:.9rem;font-family:inherit;outline:none;">
+                ${PAYMENT_METHODS.map(p => '<option value="'+p+'">'+p+'</option>').join('')}
+            </select>
+        </div>
+        <div style="text-align:center;margin-top:8px;color:var(--text2);font-size:.85rem;">
+            <i class="fas fa-info-circle"></i> O valor de <strong>R$ ${(s?s.price:0).toFixed(2)}</strong> será registrado automaticamente nos ganhos.
+        </div>
+    `;
+    const btn = document.getElementById('crudBtn');
+    btn.textContent = 'Confirmar e Finalizar';
+    btn.type = 'button';
+    btn.onclick = function() {
+        const payment = document.getElementById('cpPayment').value;
+        const appt = DB.appointments.find(x => x.id === apptId);
+        if (!appt) return;
+        appt.status = 'completed';
+        appt.paymentMethod = payment;
+        const svc = DB.services.find(x => x.id === appt.serviceId);
+        if (svc) {
+            const nextId = Math.max(...DB.transactions.map(t => t.id), 0) + 1;
+            DB.transactions.push({
+                id: nextId, hairdresserId: currentUser.id,
+                type: 'income', category: svc.name,
+                description: svc.name + ' — ' + appt.clientName,
+                amount: svc.price, date: appt.date,
+                paymentMethod: payment
+            });
+        }
+        saveDB();
+        closeCrudModal();
+        renderApptsAfterUpdate();
+        const h = DB.hairdressers.find(h => h.id === appt.hairdresserId);
+        const d = new Date(appt.date + 'T00:00:00');
+        const dateStr = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+        const msg = 'Olá ' + appt.clientName + '!\n\n' +
+            '✅ Seu atendimento foi concluído!\n\n' +
+            '💇 Serviço: ' + (svc?svc.name:'') + '\n' +
+            '💰 Valor: R$ ' + (svc?svc.price.toFixed(2):'') + '\n' +
+            '💳 Pagamento: ' + payment + '\n' +
+            '📅 Data: ' + dateStr + '\n\n' +
+            'Obrigado pela preferência! Volte sempre 🙌';
+        if (appt.clientPhone) setTimeout(() => openWhatsApp(appt.clientPhone, msg), 500);
+        showToast('Agendamento concluído! R$ ' + (svc?svc.price.toFixed(2):'0,00') + ' registrado nos ganhos.', 'success');
+    };
+}
+
+function renderApptsAfterUpdate() {
     const content = document.getElementById('dashContent');
     if (currentUser.role === 'admin') renderAdminAppointments(content);
     else renderMyAppointments(content);
     updateStats();
-    if (status === 'cancelled' && a.clientPhone) {
-        const s = DB.services.find(s => s.id === a.serviceId);
-        const h = DB.hairdressers.find(h => h.id === a.hairdresserId);
-        const d = new Date(a.date + 'T00:00:00');
-        const dateStr = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
-        const msg = 'Olá ' + a.clientName + '!\n\n' +
-            '❗ Infelizmente o seu agendamento foi cancelado.\n\n' +
-            '📋 Detalhes do cancelamento:\n' +
-            '👤 Profissional: ' + (h ? h.name : '') + '\n' +
-            '💇 Serviço: ' + (s ? s.name : '') + '\n' +
-            '📅 Data: ' + dateStr + '\n' +
-            '⏰ Horário: ' + a.time + '\n\n' +
-            'Por favor, entre em contato para reagendar seu horário em outro dia.\n\n' +
-            'Pedimos desculpas pelo transtorno! 🙏';
-        setTimeout(() => openWhatsApp(a.clientPhone, msg), 500);
-        showToast('Agendamento cancelado. Notificação enviada ao cliente.', 'error');
-    } else {
-        showToast(status === 'completed' ? 'Agendamento concluído!' : 'Agendamento cancelado.', status === 'completed' ? 'success' : 'error');
-    }
+}
+
+function cancelNotifyClient(a) {
+    const s = DB.services.find(s => s.id === a.serviceId);
+    const h = DB.hairdressers.find(h => h.id === a.hairdresserId);
+    const d = new Date(a.date + 'T00:00:00');
+    const dateStr = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+    const msg = 'Olá ' + a.clientName + '!\n\n' +
+        '❗ Infelizmente o seu agendamento foi cancelado.\n\n' +
+        '📋 Detalhes do cancelamento:\n' +
+        '👤 Profissional: ' + (h ? h.name : '') + '\n' +
+        '💇 Serviço: ' + (s ? s.name : '') + '\n' +
+        '📅 Data: ' + dateStr + '\n' +
+        '⏰ Horário: ' + a.time + '\n\n' +
+        'Por favor, entre em contato para reagendar seu horário em outro dia.\n\n' +
+        'Pedimos desculpas pelo transtorno! 🙏';
+    setTimeout(() => openWhatsApp(a.clientPhone, msg), 500);
+    showToast('Agendamento cancelado. Notificação enviada ao cliente.', 'error');
 }
 
 /* === CATALOG === */
