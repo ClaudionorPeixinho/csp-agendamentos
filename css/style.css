@@ -140,8 +140,9 @@ section{padding:100px 24px;position:relative}
 .login-box{max-width:420px;width:100%;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:40px;backdrop-filter:blur(12px)}
 .login-box h2{font-family:'Playfair Display',serif;font-size:1.8rem;margin-bottom:8px;text-align:center}
 .login-box p.sub{color:var(--text2);font-size:.9rem;margin-bottom:28px;text-align:center}
-.login-tabs{display:flex;gap:8px;margin-bottom:24px}
-.login-tab{flex:1;padding:10px;text-align:center;border:1px solid var(--border);border-radius:var(--rs);background:transparent;color:var(--text2);cursor:pointer;transition:var(--t);font-family:inherit;font-size:.85rem;font-weight:500}
+.login-tabs{display:flex;gap:8px;margin-bottom:24px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.login-tabs::-webkit-scrollbar{display:none}
+.login-tab{flex:0 1 auto;padding:10px 12px;text-align:center;border:1px solid var(--border);border-radius:var(--rs);background:transparent;color:var(--text2);cursor:pointer;transition:var(--t);font-family:inherit;font-size:.85rem;font-weight:500;white-space:nowrap}
 .login-tab:hover{border-color:var(--gold);color:var(--gold)}
 .login-tab.active{background:var(--gold);color:#0d0d1a;border-color:var(--gold);font-weight:600}
 .btn-login{width:100%;padding:14px;background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:#0d0d1a;border:none;border-radius:var(--rs);font-size:1rem;font-weight:700;cursor:pointer;transition:var(--t);font-family:inherit}
@@ -303,6 +304,8 @@ footer{border-top:1px solid var(--border);padding:60px 24px 24px}
     .toast-container{left:16px;right:16px;bottom:16px}
     .toast{max-width:100%}
     .dash-select{min-width:100%}
+    .login-tabs{gap:4px}
+    .login-tab{padding:8px;font-size:.75rem}
 }
 /* PWA / Install */
 @media(display-mode:standalone){
