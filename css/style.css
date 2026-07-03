@@ -150,6 +150,8 @@ section{padding:100px 24px;position:relative}
 .login-error{color:var(--red);font-size:.8rem;text-align:center;margin-top:12px;display:none}
 .logout-btn{background:none;border:1px solid var(--border);color:var(--text2);padding:8px 16px;border-radius:50px;cursor:pointer;font-size:.8rem;transition:var(--t);font-family:inherit}
 .logout-btn:hover{border-color:var(--red);color:var(--red)}
+.login-admin-link{display:flex;align-items:center;justify-content:center;gap:6px;margin-top:12px;padding:8px;color:var(--text3);font-size:.8rem;cursor:pointer;transition:var(--t);border-radius:var(--rs);text-decoration:none}
+.login-admin-link:hover{color:var(--gold);background:rgba(201,168,76,.04)}
 
 /* DASHBOARD */
 .dashboard{max-width:1280px;margin:0 auto;padding:120px 24px 60px}
@@ -307,6 +309,23 @@ footer{border-top:1px solid var(--border);padding:60px 24px 24px}
     .login-tabs{gap:4px}
     .login-tab{padding:8px;font-size:.75rem}
 }
+/* GALLERY */
+.modal-gallery{max-width:800px}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+.gallery-item{border-radius:var(--rs);overflow:hidden;border:1px solid var(--border);background:var(--card);cursor:pointer;transition:var(--t)}
+.gallery-item:hover{transform:scale(1.02);border-color:var(--gold)}
+.gallery-item img{width:100%;height:180px;object-fit:cover;display:block}
+.gallery-item .gallery-caption{padding:10px 12px;font-size:.8rem;color:var(--text2)}
+.gallery-empty{text-align:center;padding:40px;color:var(--text3)}
+.gallery-empty i{font-size:3rem;display:block;margin-bottom:12px;opacity:.3}
+/* LIGHTBOX */
+.lightbox-overlay{position:fixed;inset:0;background:rgba(0,0,0,.95);z-index:5000;display:none;align-items:center;justify-content:center;padding:24px;cursor:pointer}
+.lightbox-overlay.open{display:flex}
+.lightbox-overlay img{max-width:90vw;max-height:90vh;object-fit:contain;border-radius:var(--rs)}
+.lightbox-overlay .lightbox-close{position:absolute;top:16px;right:24px;color:#fff;font-size:2rem;cursor:pointer;background:none;border:none;opacity:.6;transition:var(--t)}
+.lightbox-overlay .lightbox-close:hover{opacity:1}
+.lightbox-overlay .lightbox-caption{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:rgba(255,255,255,.7);font-size:.9rem;text-align:center;max-width:80%}
+
 /* PWA / Install */
 @media(display-mode:standalone){
     body{padding-top:env(safe-area-inset-top)}

@@ -152,11 +152,10 @@
     <section class="login-section">
         <div class="login-box fade-in">
             <h2>Acesso</h2>
-                            <p class="sub">Faça login como cabeleireiro, usuário ou administrador</p>
-                            <div class="login-tabs">
+                            <p class="sub">Faça login como cabeleireiro ou usuário</p>
+                            <div class="login-tabs" id="loginTabs">
                                 <button class="login-tab active" data-role="hairdresser" onclick="switchLoginTab('hairdresser')">Cabeleireiro</button>
                                 <button class="login-tab" data-role="user" onclick="switchLoginTab('user')">Usuário</button>
-                                <button class="login-tab" data-role="admin" onclick="switchLoginTab('admin')">Administrador</button>
                             </div>
             <div id="loginFormContainer">
                 <form onsubmit="handleLogin(event)">
@@ -173,6 +172,7 @@
                     <button type="submit" class="btn-login" id="loginBtn"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
                     <div class="login-error" id="loginError">Usuário ou senha inválidos.</div>
                 </form>
+                <div class="login-admin-link" id="adminLink" onclick="showAdminLogin()"><i class="fas fa-lock"></i> Acesso administrativo</div>
                 <div id="loginRegisterArea" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
                     <p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">Não tem uma conta?</p>
                     <button class="btn-secondary" onclick="toggleRegisterForm()" style="width:100%;padding:12px;font-size:.9rem;"><i class="fas fa-user-plus"></i> Criar Conta Gratuita</button>
@@ -282,6 +282,16 @@
             <div id="crudFields"></div>
             <button type="submit" class="btn-submit" id="crudBtn">Salvar</button>
         </form>
+    </div>
+</div>
+
+<!-- === MODAL GALERIA === -->
+<div class="modal-overlay" id="galleryModal">
+    <div class="modal modal-gallery">
+        <button class="modal-close" onclick="closeGalleryModal()"><i class="fas fa-times"></i></button>
+        <h2 id="galleryTitle">Nossos Serviços</h2>
+        <p class="sub" id="gallerySub">Confira nossos trabalhos.</p>
+        <div id="galleryContent"></div>
     </div>
 </div>
 

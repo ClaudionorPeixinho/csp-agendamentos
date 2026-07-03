@@ -69,6 +69,7 @@ function loadDB() {
     if (!DB.transactions) DB.transactions = [];
     if (!DB.portfolio) DB.portfolio = [];
     if (!DB.freeUsers) DB.freeUsers = [];
+    DB.services.forEach(s => { if (s.hairdresserId === undefined) s.hairdresserId = null; });
     saveDB();
 }
 
@@ -85,6 +86,7 @@ function showView(id) {
         links[0].classList.add('active');
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+    if (id === 'login' && typeof backToLogin === 'function') backToLogin();
     if (id === 'dashboard') renderDashboard();
     updateNav();
 }
@@ -226,6 +228,53 @@ function switchLoginTab(role) {
         `;
         btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Entrar';
     }
+}
+
+function showAdminLogin() {
+    loginRole = 'admin';
+    document.getElementById('loginTabs').style.display = 'none';
+    document.getElementById('adminLink').style.display = 'none';
+    document.getElementById('loginRegisterArea').style.display = 'none';
+    document.getElementById('loginRegisterForm').style.display = 'none';
+    document.getElementById('loginError').style.display = 'none';
+    const fields = document.getElementById('loginFormFields');
+    fields.innerHTML = `
+        <div class="form-group">
+            <label>Usuário</label>
+            <input type="text" id="loginUser" placeholder="Usuário administrador" required>
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="loginPass" placeholder="Senha" required>
+        </div>
+        <div style="text-align:center;margin-top:4px;">
+            <a onclick="backToLogin()" style="color:var(--text3);font-size:.8rem;cursor:pointer;">← Voltar</a>
+        </div>
+    `;
+    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-lock"></i> Entrar como Admin';
+}
+
+function backToLogin() {
+    loginRole = 'hairdresser';
+    document.getElementById('loginTabs').style.display = 'flex';
+    document.getElementById('adminLink').style.display = 'flex';
+    document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginRegisterArea').style.display = 'none';
+    document.getElementById('loginRegisterForm').style.display = 'none';
+    const fields = document.getElementById('loginFormFields');
+    fields.innerHTML = `
+        <div class="form-group">
+            <label>Usuário</label>
+            <input type="text" id="loginUser" placeholder="Seu usuário" required>
+        </div>
+        <div class="form-group">
+            <label>Senha</label>
+            <input type="password" id="loginPass" placeholder="Sua senha" required>
+        </div>
+    `;
+    document.getElementById('loginBtn').innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Entrar';
+    document.querySelector('.login-tab[data-role="hairdresser"]').classList.add('active');
+    document.querySelector('.login-tab[data-role="user"]').classList.remove('active');
 }
 
 function handleLogin(e) {
@@ -395,7 +444,6 @@ function renderDashboard() {
         tabs.innerHTML = `
             <button class="dash-tab active" onclick="switchDashTab('appointments',this)"><i class="fas fa-calendar-check"></i> Agendamentos</button>
             <button class="dash-tab" onclick="switchDashTab('hairdressers',this)"><i class="fas fa-users"></i> Cabeleireiros</button>
-            <button class="dash-tab" onclick="switchDashTab('services',this)"><i class="fas fa-cut"></i> Serviços</button>
             <button class="dash-tab" onclick="switchDashTab('admin-config',this)"><i class="fas fa-cog"></i> Config.</button>
         `;
         switchDashTab('appointments', tabs.querySelector('.dash-tab'));
@@ -413,14 +461,12 @@ function renderDashboard() {
         sub.textContent = 'Bem-vindo, ' + currentUser.name + '! Plano ' + (h ? h.plan : '') + '.';
         let tabHtml = `
             <button class="dash-tab active" onclick="switchDashTab('my-appointments',this)"><i class="fas fa-calendar-check"></i> Agendamentos</button>
+            <button class="dash-tab" onclick="switchDashTab('my-services',this)"><i class="fas fa-cut"></i> Meus Serviços</button>
+            <button class="dash-tab" onclick="switchDashTab('my-portfolio',this)"><i class="fas fa-images"></i> Galeria</button>
             <button class="dash-tab" onclick="switchDashTab('my-config',this)"><i class="fas fa-cog"></i> Meu Horário</button>`;
         if (isPro) {
             tabHtml += `
             <button class="dash-tab" onclick="switchDashTab('my-finance',this)"><i class="fas fa-dollar-sign"></i> Financeiro</button>`;
-            if (h.portfolioEnabled) {
-                tabHtml += `
-            <button class="dash-tab" onclick="switchDashTab('my-portfolio',this)"><i class="fas fa-images"></i> Portfólio</button>`;
-            }
         }
         tabs.innerHTML = tabHtml;
         switchDashTab('my-appointments', tabs.querySelector('.dash-tab'));
@@ -433,12 +479,12 @@ function switchDashTab(tab, btn) {
     const content = document.getElementById('dashContent');
 
     if (tab === 'my-appointments') renderMyAppointments(content);
+    else if (tab === 'my-services') renderMyServices(content);
     else if (tab === 'my-config') renderMyConfig(content);
     else if (tab === 'my-finance') renderMyFinance(content);
     else if (tab === 'my-portfolio') renderMyPortfolio(content);
     else if (tab === 'appointments') renderAdminAppointments(content);
     else if (tab === 'hairdressers') renderAdminHairdressers(content);
-    else if (tab === 'services') renderAdminServices(content);
     else if (tab === 'admin-config') renderAdminConfig(content);
     else if (tab === 'free-home') renderFreeHome(content);
 }
@@ -503,7 +549,8 @@ function openManualBooking() {
     document.getElementById('crudTitle').textContent = 'Novo Agendamento Manual';
     document.getElementById('crudSub').textContent = 'Agende um cliente manualmente em qualquer horário.';
 
-    const serviceOptions = DB.services.map(s => '<option value="'+s.id+'">'+s.name+' - R$ '+s.price+' ('+s.duration+')</option>').join('');
+    const hServices = DB.services.filter(s => s.hairdresserId === currentUser.id);
+    const serviceOptions = (hServices.length > 0 ? hServices : DB.services).map(s => '<option value="'+s.id+'">'+s.name+' - R$ '+s.price+' ('+s.duration+')</option>').join('');
     document.getElementById('crudFields').innerHTML = `
         <input type="hidden" id="mbId" value="${Date.now()}">
         <div class="form-group"><label>Nome do Cliente</label><input type="text" id="mbName" placeholder="Nome completo" required></div>
@@ -545,6 +592,37 @@ function openManualBooking() {
         renderMyAppointments(document.getElementById('dashContent'));
         showToast('Agendamento manual criado para ' + name + '!', 'success');
     };
+}
+
+/* === MY SERVICES (hairdresser) === */
+function renderMyServices(container) {
+    const hId = currentUser.id;
+    let myServices = DB.services.filter(s => s.hairdresserId === hId);
+    if (myServices.length === 0) {
+        const globalServices = DB.services.filter(s => !s.hairdresserId);
+        if (globalServices.length > 0) {
+            globalServices.forEach(s => {
+                const newId = Math.max(...DB.services.map(x => x.id), 0) + 1;
+                DB.services.push({ ...s, id: newId, hairdresserId: hId });
+            });
+            saveDB();
+            myServices = DB.services.filter(s => s.hairdresserId === hId);
+        }
+    }
+    let html = '<div class="crud-bar"><h3 style="font-size:1.1rem;">Meus Serviços</h3><button class="btn-primary" style="padding:10px 24px;font-size:.85rem;" onclick="openCrud(\'service\')"><i class="fas fa-plus"></i> Novo Serviço</button></div>';
+    if (myServices.length === 0) {
+        html += '<div class="empty-state"><i class="fas fa-cut"></i><p>Você ainda não cadastrou nenhum serviço. Clique em "Novo Serviço" para começar.</p></div>';
+        container.innerHTML = html;
+        return;
+    }
+    html += '<div class="crud-table-wrap"><table><thead><tr><th>Serviço</th><th>Preço</th><th>Duração</th><th>Ações</th></tr></thead><tbody>';
+    myServices.forEach(s => {
+        html += '<tr><td><strong>'+s.name+'</strong></td><td>R$ '+s.price+'</td><td>'+s.duration+'</td><td style="display:flex;gap:6px;">' +
+            '<button class="btn-sm" onclick="openCrud(\'service\','+s.id+')"><i class="fas fa-edit"></i></button>' +
+            '<button class="btn-sm danger" onclick="deleteService('+s.id+')"><i class="fas fa-trash"></i></button></td></tr>';
+    });
+    html += '</tbody></table></div>';
+    container.innerHTML = html;
 }
 
 /* === MY CONFIG (hairdresser) === */
@@ -1033,10 +1111,15 @@ function renderAdminServices(container) {
 }
 
 function deleteService(id) {
+    const s = DB.services.find(s => s.id === id);
+    if (!s) return;
+    if (currentUser.role === 'hairdresser' && s.hairdresserId !== currentUser.id) return;
     if (!confirm('Excluir este serviço?')) return;
     DB.services = DB.services.filter(s => s.id !== id);
     saveDB();
-    renderAdminServices(document.getElementById('dashContent'));
+    const container = document.getElementById('dashContent');
+    if (currentUser.role === 'hairdresser') renderMyServices(container);
+    else renderAdminServices(container);
     updateStats();
     showToast('Serviço excluído.', 'success');
 }
@@ -1313,11 +1396,14 @@ function submitCrud(e) {
             const s = DB.services.find(s => s.id === id);
             if (s) Object.assign(s, { name, price, duration });
         } else {
-            DB.services.push({ id: formId, name, icon: 'fa-cut', price, duration });
+            DB.services.push({ id: formId, name, icon: 'fa-cut', price, duration, hairdresserId: (currentUser.role === 'hairdresser' ? currentUser.id : null) });
         }
         saveDB();
         closeCrudModal();
-        renderAdminServices(document.getElementById('dashContent'));
+        const container = document.getElementById('dashContent');
+        if (currentUser.role === 'hairdresser') renderMyServices(container);
+        else renderAdminServices(container);
+        renderCatalog();
         updateStats();
         showToast(id ? 'Serviço atualizado!' : 'Serviço criado!', 'success');
     }
@@ -1397,7 +1483,13 @@ function openBooking(hairdresserId) {
 
     const sSel = document.getElementById('fService');
     sSel.innerHTML = '';
-    DB.services.forEach(s => {
+    const hId2 = hairdresserId || (bookingHairdresserId) || null;
+    let availableServices = DB.services;
+    if (hId2) {
+        const hs = DB.services.filter(s => s.hairdresserId === hId2);
+        if (hs.length > 0) availableServices = hs;
+    }
+    availableServices.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.id;
         opt.textContent = s.name + ' - R$ ' + s.price + ' (' + s.duration + ')';
@@ -1435,7 +1527,22 @@ function setupBookingListeners() {
         } else if (warn) {
             warn.style.display = 'none';
         }
-        if (!bookingHairdresserId && document.getElementById('fDate').value) renderTimeSlots();
+        if (!bookingHairdresserId) {
+            const sSel = document.getElementById('fService');
+            sSel.innerHTML = '';
+            let svcs = DB.services;
+            if (hId) {
+                const hs = DB.services.filter(s => s.hairdresserId === hId);
+                if (hs.length > 0) svcs = hs;
+            }
+            svcs.forEach(s => {
+                const opt = document.createElement('option');
+                opt.value = s.id;
+                opt.textContent = s.name + ' - R$ ' + s.price + ' (' + s.duration + ')';
+                sSel.appendChild(opt);
+            });
+            if (document.getElementById('fDate').value) renderTimeSlots();
+        }
     };
 }
 
@@ -1641,6 +1748,75 @@ function renderFilters() {
     });
 }
 
+/* === GALLERY === */
+function openHairdresserGallery(hId) {
+    const h = DB.hairdressers.find(h => h.id === hId);
+    if (!h) return;
+    const posts = DB.portfolio.filter(p => p.hairdresserId === hId);
+    const modal = document.getElementById('galleryModal');
+    document.getElementById('galleryTitle').textContent = h.name;
+    document.getElementById('gallerySub').textContent = 'Confira nossos trabalhos e serviços.';
+    const content = document.getElementById('galleryContent');
+    if (posts.length === 0) {
+        content.innerHTML = '<div class="gallery-empty"><i class="fas fa-images"></i><p>Nenhum trabalho publicado ainda.</p></div>';
+    } else {
+        let html = '<div class="gallery-grid">';
+        [...posts].reverse().forEach(p => {
+            const d = new Date(p.date);
+            const imgSrc = p.images && p.images.length > 0 ? p.images[0] : '';
+            const caption = p.caption || '';
+            const allImages = (p.images && p.images.length > 0) ? p.images.join('||') : '';
+            html += '<div class="gallery-item" onclick="openLightbox(\''+allImages.replace(/'/g,"\\'")+'\',\''+caption.replace(/'/g,"\\'")+'\')">' +
+                (imgSrc ? '<img src="'+imgSrc+'" alt="'+caption+'" onerror="this.outerHTML=\'<div style=height:180px;display:flex;align-items:center;justify-content:center;color:var(--text3);><i class=\\\'fas fa-image\\\' style=font-size:2rem;opacity:.3;></i></div>\'">' : '<div style="height:180px;display:flex;align-items:center;justify-content:center;color:var(--text3);"><i class="fas fa-image" style="font-size:2rem;opacity:.3;"></i></div>') +
+                (caption ? '<div class="gallery-caption">'+caption+'</div>' : '') +
+                (p.images && p.images.length > 1 ? '<div style="padding:0 12px 8px;font-size:.7rem;color:var(--gold);"><i class="fas fa-images"></i> '+(p.images.length)+' fotos</div>' : '') +
+                '</div>';
+        });
+        html += '</div>';
+        content.innerHTML = html;
+    }
+    modal.classList.add('open');
+    document.body.classList.add('no-scroll');
+}
+
+function closeGalleryModal() {
+    document.getElementById('galleryModal').classList.remove('open');
+    document.body.classList.remove('no-scroll');
+}
+document.addEventListener('click', function(e) {
+    const gm = document.getElementById('galleryModal');
+    if (gm && gm.classList.contains('open') && e.target === gm) closeGalleryModal();
+});
+
+function openLightbox(imagesStr, caption) {
+    const images = imagesStr.split('||').filter(Boolean);
+    if (images.length === 0) return;
+    let idx = 0;
+    const overlay = document.createElement('div');
+    overlay.className = 'lightbox-overlay open';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+    overlay.innerHTML =
+        '<button class="lightbox-close" onclick="this.closest(\'.lightbox-overlay\').remove()"><i class="fas fa-times"></i></button>' +
+        '<div style="position:relative;display:flex;align-items:center;gap:16px;">' +
+        (images.length > 1 ? '<button class="btn-card" onclick="event.stopPropagation();navigateLightbox(-1)" style="font-size:1.2rem;padding:8px 12px;" id="lbPrev"><i class="fas fa-chevron-left"></i></button>' : '') +
+        '<img id="lbImg" src="'+images[0]+'" style="max-width:90vw;max-height:85vh;object-fit:contain;border-radius:var(--rs);">' +
+        (images.length > 1 ? '<button class="btn-card" onclick="event.stopPropagation();navigateLightbox(1)" style="font-size:1.2rem;padding:8px 12px;" id="lbNext"><i class="fas fa-chevron-right"></i></button>' : '') +
+        '</div>' +
+        (caption ? '<div class="lightbox-caption">'+caption+'</div>' : '');
+    document.body.appendChild(overlay);
+    window.__lbImages = images;
+    window.__lbIdx = 0;
+    window.navigateLightbox = function(dir) {
+        window.__lbIdx = (window.__lbIdx + dir + images.length) % images.length;
+        document.getElementById('lbImg').src = images[window.__lbIdx];
+    };
+    document.addEventListener('keydown', function lbKey(e) {
+        if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', lbKey); }
+        if (e.key === 'ArrowLeft') { window.__lbIdx = (window.__lbIdx - 1 + images.length) % images.length; document.getElementById('lbImg').src = images[window.__lbIdx]; }
+        if (e.key === 'ArrowRight') { window.__lbIdx = (window.__lbIdx + 1) % images.length; document.getElementById('lbImg').src = images[window.__lbIdx]; }
+    });
+}
+
 function renderCatalog(filter) {
     const grid = document.getElementById('catalogGrid');
     grid.innerHTML = '';
@@ -1654,6 +1830,7 @@ function renderCatalog(filter) {
         const hasPhoto = h.photo && h.photo.length > 10;
         const hasGps = h.gpsLink && h.gpsLink.length > 10;
         const closedBadge = h.isClosed ? '<div class="closed-badge"><i class="fas fa-door-closed"></i> Fechado</div>' : '';
+        const hasPortfolio = DB.portfolio.some(p => p.hairdresserId === h.id);
 
         if (hasPhoto) {
             const gpsAttr = hasGps ? 'onclick="window.open(\''+h.gpsLink+'\',\'_blank\')" title="Ver no mapa"' : '';
@@ -1666,16 +1843,18 @@ function renderCatalog(filter) {
                 '</div>' +
                 '<div class="card-info" style="margin-bottom:12px;"><h3>'+h.name+'</h3><div class="card-specialty">'+h.specialty+'</div><div class="card-rating"><i class="fas fa-star"></i><span>'+h.rating+'</span></div></div>' +
                 '<div class="card-bio">'+h.bio+'</div>' +
-                '<div class="card-bottom"><div class="card-availability" style="color:var(--text3);font-size:.8rem;"><i class="fas fa-clock"></i> Consulte horários</div>' +
-                (h.isClosed ? '<button class="btn-card" disabled style="opacity:.4;cursor:not-allowed;"><i class="fas fa-door-closed"></i> Indisponível</button>' : '<button class="btn-card" onclick="openBooking('+h.id+')"><i class="fas fa-calendar-plus"></i> Agendar</button>') + '</div>';
+                '<div class="card-bottom"><div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                (hasPortfolio ? '<button class="btn-card" onclick="event.stopPropagation();openHairdresserGallery('+h.id+')"><i class="fas fa-images"></i> Nossos Serviços</button>' : '') +
+                (h.isClosed ? '<button class="btn-card" disabled style="opacity:.4;cursor:not-allowed;"><i class="fas fa-door-closed"></i> Indisponível</button>' : '<button class="btn-card" onclick="openBooking('+h.id+')"><i class="fas fa-calendar-plus"></i> Agendar</button>') + '</div></div>';
         } else {
             const avatarHtml = '<div class="card-avatar '+(hasGps?'card-avatar-clickable':'')+'" '+(hasGps?'onclick="window.open(\''+h.gpsLink+'\',\'_blank\')" title="Ver no mapa"':'')+'>'+initials+(hasGps?'<span class="gps-icon"><i class="fas fa-map-marker-alt"></i></span>':'')+'</div>';
             card.innerHTML =
                 closedBadge +
                 '<div class="card-top">'+avatarHtml+'<div class="card-info"><h3>'+h.name+'</h3><div class="card-specialty">'+h.specialty+'</div><div class="card-rating"><i class="fas fa-star"></i><span>'+h.rating+'</span></div></div></div>' +
                 '<div class="card-bio">'+h.bio+'</div>' +
-                '<div class="card-bottom"><div class="card-availability" style="color:var(--text3);font-size:.8rem;"><i class="fas fa-clock"></i> Consulte horários</div>' +
-                (h.isClosed ? '<button class="btn-card" disabled style="opacity:.4;cursor:not-allowed;"><i class="fas fa-door-closed"></i> Indisponível</button>' : '<button class="btn-card" onclick="openBooking('+h.id+')"><i class="fas fa-calendar-plus"></i> Agendar</button>') + '</div>';
+                '<div class="card-bottom"><div style="display:flex;gap:8px;flex-wrap:wrap;">' +
+                (hasPortfolio ? '<button class="btn-card" onclick="event.stopPropagation();openHairdresserGallery('+h.id+')"><i class="fas fa-images"></i> Nossos Serviços</button>' : '') +
+                (h.isClosed ? '<button class="btn-card" disabled style="opacity:.4;cursor:not-allowed;"><i class="fas fa-door-closed"></i> Indisponível</button>' : '<button class="btn-card" onclick="openBooking('+h.id+')"><i class="fas fa-calendar-plus"></i> Agendar</button>') + '</div></div>';
         }
         grid.appendChild(card);
     });
