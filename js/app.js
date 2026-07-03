@@ -24,7 +24,8 @@ const DEFAULT_DATA = {
     ],
     appointments: [],
     transactions: [],
-    portfolio: []
+    portfolio: [],
+    freeUsers: []
 };
 
 let DB = {};
@@ -67,6 +68,7 @@ function loadDB() {
     });
     if (!DB.transactions) DB.transactions = [];
     if (!DB.portfolio) DB.portfolio = [];
+    if (!DB.freeUsers) DB.freeUsers = [];
     saveDB();
 }
 
@@ -104,6 +106,10 @@ function checkSession() {
             const session = JSON.parse(s);
             if (session.role === 'admin') {
                 currentUser = { role: 'admin', name: 'Administrador' };
+            } else if (session.role === 'freeuser') {
+                const fu = DB.freeUsers.find(u => u.id === session.userId);
+                if (fu) currentUser = { role: 'freeuser', id: fu.id, name: fu.name, email: fu.email };
+                else { localStorage.removeItem('csp_session'); return; }
             } else {
                 const h = DB.hairdressers.find(h => h.id === session.hairdresserId);
                 if (h) currentUser = { role: 'hairdresser', id: h.id, name: h.name };
@@ -189,6 +195,37 @@ function switchLoginTab(role) {
         t.classList.toggle('active', t.dataset.role === role);
     });
     document.getElementById('loginError').style.display = 'none';
+    document.getElementById('loginRegisterArea').style.display = 'none';
+    document.getElementById('loginRegisterForm').style.display = 'none';
+    const fields = document.getElementById('loginFormFields');
+    const btn = document.getElementById('loginBtn');
+
+    if (role === 'user') {
+        fields.innerHTML = `
+            <div class="form-group">
+                <label>E-mail</label>
+                <input type="email" id="loginUser" placeholder="seu@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Senha</label>
+                <input type="password" id="loginPass" placeholder="Sua senha" required>
+            </div>
+        `;
+        btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Entrar';
+        document.getElementById('loginRegisterArea').style.display = 'block';
+    } else {
+        fields.innerHTML = `
+            <div class="form-group">
+                <label>Usuário</label>
+                <input type="text" id="loginUser" placeholder="Seu usuário" required>
+            </div>
+            <div class="form-group">
+                <label>Senha</label>
+                <input type="password" id="loginPass" placeholder="Sua senha" required>
+            </div>
+        `;
+        btn.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Entrar';
+    }
 }
 
 function handleLogin(e) {
@@ -202,6 +239,17 @@ function handleLogin(e) {
         if (user === DB.admin.username && pass === DB.admin.password) {
             currentUser = { role: 'admin', name: 'Administrador' };
             localStorage.setItem('csp_session', JSON.stringify({ role: 'admin' }));
+            document.getElementById('loginUser').value = '';
+            document.getElementById('loginPass').value = '';
+            showView('dashboard');
+            updateNav();
+            return;
+        }
+    } else if (loginRole === 'user') {
+        const fu = DB.freeUsers.find(u => u.email === user && u.password === pass);
+        if (fu) {
+            currentUser = { role: 'freeuser', id: fu.id, name: fu.name, email: fu.email };
+            localStorage.setItem('csp_session', JSON.stringify({ role: 'freeuser', userId: fu.id }));
             document.getElementById('loginUser').value = '';
             document.getElementById('loginPass').value = '';
             showView('dashboard');
@@ -223,11 +271,115 @@ function handleLogin(e) {
     err.style.display = 'block';
 }
 
+function toggleRegisterForm() {
+    const area = document.getElementById('loginRegisterArea');
+    const form = document.getElementById('loginRegisterForm');
+    const isVisible = form.style.display === 'block';
+    area.style.display = isVisible ? 'block' : 'none';
+    form.style.display = isVisible ? 'none' : 'block';
+}
+
+function registerFreeUser() {
+    const name = document.getElementById('regName').value.trim();
+    const email = document.getElementById('regEmail').value.trim();
+    const pass = document.getElementById('regPass').value;
+    const pass2 = document.getElementById('regPass2').value;
+
+    if (!name || !email || !pass || !pass2) {
+        showToast('Preencha todos os campos.', 'error');
+        return;
+    }
+    if (pass !== pass2) {
+        showToast('As senhas não conferem.', 'error');
+        return;
+    }
+    if (pass.length < 4) {
+        showToast('A senha deve ter pelo menos 4 caracteres.', 'error');
+        return;
+    }
+    if (DB.freeUsers.some(u => u.email === email)) {
+        showToast('Este e-mail já está cadastrado.', 'error');
+        return;
+    }
+
+    DB.freeUsers.push({
+        id: Date.now(),
+        name,
+        email,
+        password: pass,
+        plan: 'free',
+        trialExpiry: null,
+        createdAt: new Date().toISOString()
+    });
+    saveDB();
+
+    document.getElementById('regName').value = '';
+    document.getElementById('regEmail').value = '';
+    document.getElementById('regPass').value = '';
+    document.getElementById('regPass2').value = '';
+    toggleRegisterForm();
+
+    showToast('Conta criada com sucesso! Em breve você poderá testar a versão Pro por 30 dias gratuitamente.', 'success');
+}
+
 function logout() {
     currentUser = null;
     localStorage.removeItem('csp_session');
     updateNav();
     showView('public');
+}
+
+function renderFreeHome(container) {
+    const fu = DB.freeUsers.find(u => u.id === currentUser.id);
+    if (!fu) { container.innerHTML = '<div class="empty-state"><p>Usuário não encontrado.</p></div>'; return; }
+
+    const isTrial = fu.plan === 'pro_trial' && fu.trialExpiry;
+    const trialActive = isTrial && new Date(fu.trialExpiry + 'T23:59:59') >= new Date();
+    const trialExpired = isTrial && !trialActive;
+
+    let planLabel = 'Grátis';
+    let planColor = 'var(--text3)';
+    let planBadge = '<span style="background:rgba(255,255,255,.06);color:var(--text2);padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:600;">Free</span>';
+
+    if (trialActive) {
+        const daysLeft = Math.ceil((new Date(fu.trialExpiry + 'T23:59:59') - new Date()) / (1000*60*60*24));
+        planLabel = 'Pro (Teste)';
+        planColor = 'var(--gold)';
+        planBadge = `<span style="background:rgba(201,168,76,.15);color:var(--gold);padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:600;">Pro • ${daysLeft} dia(s) restantes</span>`;
+    } else if (trialExpired) {
+        planBadge = `<span style="background:rgba(231,76,60,.1);color:var(--red);padding:4px 12px;border-radius:50px;font-size:.75rem;font-weight:600;">Teste Expirado</span>`;
+    }
+
+    container.innerHTML = `
+        <div style="max-width:500px;">
+            <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;text-align:center;margin-bottom:20px;">
+                <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-dark));display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-weight:800;font-size:1.5rem;color:#0d0d1a;">
+                    ${fu.name.charAt(0).toUpperCase()}
+                </div>
+                <h3 style="font-size:1.2rem;margin-bottom:4px;">${fu.name}</h3>
+                <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px;">${fu.email}</p>
+                <div style="margin-bottom:12px;">${planBadge}</div>
+                ${!trialActive && !trialExpired ? `
+                    <p style="color:var(--text2);font-size:.85rem;line-height:1.6;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                        <i class="fas fa-star" style="color:var(--gold);"></i> 
+                        Em breve você poderá testar a versão <strong>Pro</strong> por <strong>30 dias</strong> gratuitamente!
+                    </p>
+                ` : ''}
+                ${trialActive ? `
+                    <p style="color:var(--text2);font-size:.85rem;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                        <i class="fas fa-crown" style="color:var(--gold);"></i> 
+                        Aproveite seu teste Pro até <strong>${new Date(fu.trialExpiry + 'T00:00:00').toLocaleDateString('pt-BR')}</strong>!
+                    </p>
+                ` : ''}
+                ${trialExpired ? `
+                    <p style="color:var(--red);font-size:.85rem;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                        Seu período de teste Pro expirou. Entre em contato para renovar.
+                    </p>
+                ` : ''}
+            </div>
+            <button class="btn-secondary" style="width:100%;padding:14px;" onclick="logout()"><i class="fas fa-right-from-bracket"></i> Sair</button>
+        </div>
+    `;
 }
 
 /* === DASHBOARD === */
@@ -247,6 +399,13 @@ function renderDashboard() {
             <button class="dash-tab" onclick="switchDashTab('admin-config',this)"><i class="fas fa-cog"></i> Config.</button>
         `;
         switchDashTab('appointments', tabs.querySelector('.dash-tab'));
+    } else if (currentUser.role === 'freeuser') {
+        title.textContent = 'Minha Conta';
+        sub.textContent = 'Bem-vindo, ' + currentUser.name + '!';
+        tabs.innerHTML = `
+            <button class="dash-tab active" onclick="switchDashTab('free-home',this)"><i class="fas fa-home"></i> Início</button>
+        `;
+        switchDashTab('free-home', tabs.querySelector('.dash-tab'));
     } else {
         const h = DB.hairdressers.find(h => h.id === currentUser.id);
         const isPro = h && (h.plan === 'pro' || h.plan === 'premium');
@@ -281,6 +440,7 @@ function switchDashTab(tab, btn) {
     else if (tab === 'hairdressers') renderAdminHairdressers(content);
     else if (tab === 'services') renderAdminServices(content);
     else if (tab === 'admin-config') renderAdminConfig(content);
+    else if (tab === 'free-home') renderFreeHome(content);
 }
 
 /* === MY APPOINTMENTS (hairdresser) === */
@@ -904,6 +1064,13 @@ function renderAdminConfig(container) {
             </div>
 
             <button class="btn-submit" onclick="saveAdminConfig()"><i class="fas fa-save"></i> Salvar</button>
+
+            <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
+                <h3 style="font-size:1.1rem;margin-bottom:8px;">Usuários Cadastrados</h3>
+                <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px;">Gerencie os usuários que se cadastraram gratuitamente.</p>
+                <div id="freeUsersList">${renderFreeUsersTable()}</div>
+            </div>
+
             <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border);">
                 <h3 style="font-size:1.1rem;margin-bottom:8px;">Dados</h3>
                 <p style="color:var(--text2);font-size:.85rem;margin-bottom:16px;">Exporte ou limpe todos os dados do sistema.</p>
@@ -935,6 +1102,57 @@ function renderAdminConfig(container) {
     }, 50);
 }
 
+function renderFreeUsersTable() {
+    if (!DB.freeUsers || DB.freeUsers.length === 0) {
+        return '<div class="empty-state" style="padding:20px;"><p style="font-size:.85rem;color:var(--text3);">Nenhum usuário cadastrado ainda.</p></div>';
+    }
+
+    let html = '<div class="crud-table-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Plano</th><th>Cadastro</th><th>Ações</th></tr></thead><tbody>';
+    DB.freeUsers.forEach(u => {
+        const isTrial = u.plan === 'pro_trial' && u.trialExpiry;
+        const trialActive = isTrial && new Date(u.trialExpiry + 'T23:59:59') >= new Date();
+        const trialExpired = isTrial && !trialActive;
+
+        let planLabel = 'Free';
+        let planColor = 'var(--text3)';
+        if (trialActive) {
+            const daysLeft = Math.ceil((new Date(u.trialExpiry + 'T23:59:59') - new Date()) / (1000*60*60*24));
+            planLabel = `Pro (${daysLeft}d)`;
+            planColor = 'var(--gold)';
+        } else if (trialExpired) {
+            planLabel = 'Teste Expirado';
+            planColor = 'var(--red)';
+        }
+
+        const created = new Date(u.createdAt).toLocaleDateString('pt-BR');
+
+        html += '<tr>' +
+            '<td><strong>' + u.name + '</strong></td>' +
+            '<td><small>' + u.email + '</small></td>' +
+            '<td><span style="color:' + planColor + ';font-weight:600;">' + planLabel + '</span></td>' +
+            '<td><small>' + created + '</small></td>' +
+            '<td>' +
+            (!trialActive && !trialExpired ?
+                '<button class="btn-sm success" onclick="grantProTrial(' + u.id + ')"><i class="fas fa-crown"></i> Pro 30d</button>'
+                : '<span style="color:var(--text3);font-size:.7rem;">' + (trialActive ? 'Ativo' : 'Expirado') + '</span>') +
+            '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+}
+
+function grantProTrial(userId) {
+    const u = DB.freeUsers.find(u => u.id === userId);
+    if (!u) return;
+    const expiry = new Date();
+    expiry.setDate(expiry.getDate() + 30);
+    u.plan = 'pro_trial';
+    u.trialExpiry = expiry.toISOString().slice(0, 10);
+    saveDB();
+    renderAdminConfig(document.getElementById('dashContent'));
+    showToast('Pro concedido para ' + u.name + ' por 30 dias!', 'success');
+}
+
 function removeLogo() {
     DB.admin.logo = '';
     saveDB();
@@ -963,7 +1181,7 @@ function exportData() {
 }
 
 function resetData() {
-    if (!confirm('TEM CERTEZA? Isso vai apagar TODOS os dados (agendamentos, cabeleireiros, serviços) e restaurar o padrão.')) return;
+    if (!confirm('TEM CERTEZA? Isso vai apagar TODOS os dados (agendamentos, cabeleireiros, serviços, usuários) e restaurar o padrão.')) return;
     if (!confirm('Essa ação não pode ser desfeita. Confirma?')) return;
     DB = JSON.parse(JSON.stringify(DEFAULT_DATA));
     saveDB();

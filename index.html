@@ -29,8 +29,8 @@
         <div class="logo" onclick="showView('public')" id="logoNav"></div>
         <button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
         <ul class="nav-links" id="navLinks">
-            <li><a onclick="showView('public')" class="active">Início</a></li>
-            <li><a id="navLogin" onclick="showView('login')">Entrar</a></li>
+            <li><a onclick="showView('public')" class="active btn-gold-nav">Início</a></li>
+            <li><a id="navLogin" onclick="showView('login')" class="btn-gold-nav">Entrar</a></li>
             <li><a id="navDashboard" style="display:none" onclick="showView('dashboard')">Painel</a></li>
             <li><a id="navLogout" style="display:none" class="logout-btn" onclick="logout()">Sair</a></li>
             <li><a onclick="showView('public');scrollToCatalog()" class="btn-gold-nav">Agendar</a></li>
@@ -138,9 +138,9 @@
             </div>
             <div class="footer-col">
                 <h4>Contato</h4>
-                <a href="#"><i class="fab fa-whatsapp"></i> (11) 99999-8888</a>
-                <a href="#"><i class="far fa-envelope"></i> contato@cortecerto.com.br</a>
-                <a href="#"><i class="fas fa-map-marker-alt"></i> São Paulo, SP</a>
+                <a href="https://wa.me/5514991141057" target="_blank"><i class="fab fa-whatsapp"></i> +55 (14) 99114-1057</a>
+                <a href="mailto:claudionorpeixinhoweb@gmail.com"><i class="far fa-envelope"></i> claudionorpeixinhoweb@gmail.com</a>
+                <a href="#"><i class="fas fa-map-marker-alt"></i> Pederneiras, SP</a>
             </div>
         </div>
         <div class="footer-bottom">&copy; 2026 CORTE CERTO. Todos os direitos reservados.</div>
@@ -156,19 +156,52 @@
             <div class="login-tabs">
                 <button class="login-tab active" data-role="hairdresser" onclick="switchLoginTab('hairdresser')">Cabeleireiro</button>
                 <button class="login-tab" data-role="admin" onclick="switchLoginTab('admin')">Administrador</button>
+                <button class="login-tab" data-role="user" onclick="switchLoginTab('user')">Usuário</button>
             </div>
-            <form onsubmit="handleLogin(event)">
-                <div class="form-group">
-                    <label>Usuário</label>
-                    <input type="text" id="loginUser" placeholder="Seu usuário" required>
+            <div id="loginFormContainer">
+                <form onsubmit="handleLogin(event)">
+                    <div id="loginFormFields">
+                        <div class="form-group">
+                            <label>Usuário</label>
+                            <input type="text" id="loginUser" placeholder="Seu usuário" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Senha</label>
+                            <input type="password" id="loginPass" placeholder="Sua senha" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn-login" id="loginBtn"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
+                    <div class="login-error" id="loginError">Usuário ou senha inválidos.</div>
+                </form>
+                <div id="loginRegisterArea" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                    <p style="color:var(--text2);font-size:.85rem;margin-bottom:12px;">Não tem uma conta?</p>
+                    <button class="btn-secondary" onclick="toggleRegisterForm()" style="width:100%;padding:12px;font-size:.9rem;"><i class="fas fa-user-plus"></i> Criar Conta Gratuita</button>
                 </div>
-                <div class="form-group">
-                    <label>Senha</label>
-                    <input type="password" id="loginPass" placeholder="Sua senha" required>
+                <div id="loginRegisterForm" style="display:none;margin-top:16px;padding-top:16px;border-top:1px solid var(--border);">
+                    <h4 style="font-size:.95rem;font-weight:600;margin-bottom:4px;text-align:center;">Criar Conta</h4>
+                    <p style="color:var(--text2);font-size:.8rem;margin-bottom:16px;text-align:center;">Preencha para usar a versão gratuita.</p>
+                    <div class="form-group">
+                        <label>Nome</label>
+                        <input type="text" id="regName" placeholder="Seu nome" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="regEmail" placeholder="seu@email.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <input type="password" id="regPass" placeholder="Crie uma senha" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Confirmar Senha</label>
+                        <input type="password" id="regPass2" placeholder="Confirme a senha" required>
+                    </div>
+                    <button class="btn-login" onclick="registerFreeUser()" style="margin-top:4px;"><i class="fas fa-user-plus"></i> Criar Conta</button>
+                    <div style="text-align:center;margin-top:10px;">
+                        <a onclick="toggleRegisterForm()" style="color:var(--gold);font-size:.8rem;cursor:pointer;">← Voltar para login</a>
+                    </div>
                 </div>
-                <button type="submit" class="btn-login"><i class="fas fa-arrow-right-to-bracket"></i> Entrar</button>
-                <div class="login-error" id="loginError">Usuário ou senha inválidos.</div>
-            </form>
+            </div>
         </div>
     </section>
 </div>
@@ -223,7 +256,7 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Telefone</label>
-                    <input type="tel" id="fPhone" placeholder="(11) 99999-8888" required>
+                    <input type="tel" id="fPhone" placeholder="+55 (14) 99114-1057" required>
                 </div>
                 <div class="form-group">
                     <label>E-mail</label>
