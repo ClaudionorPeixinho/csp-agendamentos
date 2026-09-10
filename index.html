@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <meta name="theme-color" content="#0d0d1a">
+    <meta name="theme-color" content="#08080a">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="CORTE CERTO">
@@ -43,9 +43,9 @@
 <div class="view active" id="viewPublic">
     <section class="hero">
         <div class="hero-content">
-            <div class="hero-badge"><i class="fas fa-cut"></i> &nbsp;Beleza & Profissionalismo</div>
-            <h1>Seu Visual,<br>Nosso Compromisso</h1>
-            <p>Conectamos você aos melhores cabeleireiros. Agende online de forma rápida, segura e sem complicação.</p>
+            <div class="hero-badge"><i class="fas fa-gem"></i> Experiência de alto padrão</div>
+            <h1>Beleza que merece<br>uma agenda impecável</h1>
+            <p>A plataforma de agendamento dos salões de referência. Elegância, tecnologia e controle total do seu negócio — em um só lugar.</p>
             <div class="hero-buttons">
                 <a class="btn-primary btn-pulse" onclick="scrollToCatalog()"><i class="fas fa-calendar-check"></i> Agende Seu Horário</a>
             </div>
@@ -69,54 +69,69 @@
 
     <section id="planos" style="background:var(--bg2);">
         <div class="section-header fade-in">
-            <div class="section-tag"><i class="fas fa-crown"></i> &nbsp;Planos</div>
-            <h2>Impulsione Seu Negócio</h2>
-            <p>Escolha o plano ideal para alavancar seu salão com ferramentas profissionais.</p>
+            <div class="section-tag"><i class="fas fa-crown"></i> Planos</div>
+            <h2>Escolha o nível da sua operação</h2>
+            <p>Comece de graça com o essencial e evolua conforme o seu salão cresce. Sem fidelidade, sem burocracia.</p>
         </div>
         <div class="plans-grid fade-in">
+
             <div class="plan-card">
-                <div class="plan-icon" style="color:var(--text3);"><i class="fas fa-user"></i></div>
-                <h3 class="plan-name">Basic</h3>
+                <div class="plan-icon"><i class="fas fa-scissors"></i></div>
+                <h3 class="plan-name">Básico</h3>
+                <div class="plan-tagline">Para começar com o pé direito</div>
                 <div class="plan-price free">Grátis</div>
                 <ul class="plan-features">
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Perfil profissional</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Agenda de agendamentos</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Link exclusivo para clientes</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Confirmação via WhatsApp</li>
-                    <li><i class="fas fa-times" style="color:var(--red);"></i> Financeiro</li>
-                    <li><i class="fas fa-times" style="color:var(--red);"></i> Portfólio</li>
+                    <li><i class="fas fa-check"></i> <span><strong>Agenda de agendamentos</strong> completa</span></li>
+                    <li><i class="fas fa-check"></i> <span>Agendamento manual de clientes</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Configurações</strong> para personalizar o app</span></li>
+                    <li><i class="fas fa-check"></i> <span>Horário de trabalho, almoço e folgas</span></li>
+                    <li><i class="fas fa-check"></i> <span>Link exclusivo + confirmação no WhatsApp</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Catálogo de serviços personalizado</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Galeria de trabalhos (portfólio)</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Controle financeiro</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Relatórios e destaque no catálogo</span></li>
                 </ul>
+                <a class="plan-cta ghost" onclick="showView('login')">Criar conta grátis</a>
             </div>
+
             <div class="plan-card featured">
-                <div class="plan-popular">Popular</div>
+                <div class="plan-popular">Mais escolhido</div>
                 <div class="plan-icon"><i class="fas fa-star"></i></div>
                 <h3 class="plan-name">Pro</h3>
+                <div class="plan-tagline">Gestão profissional do salão</div>
                 <div class="plan-price">R$ 19,90<small>/mês</small></div>
                 <ul class="plan-features">
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Tudo do Basic</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> <strong>Financeiro completo</strong></li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Receitas x Despesas</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Faturamento por serviço</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Faturamento por pagamento</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Portfólio de trabalhos</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Compartilhar nas redes</li>
+                    <li><i class="fas fa-check"></i> <span>Tudo do plano Básico</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Catálogo de serviços</strong> com preços e duração</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Galeria de trabalhos</strong> + compartilhamento</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Financeiro completo</strong> — receitas x despesas</span></li>
+                    <li><i class="fas fa-check"></i> <span>Faturamento por serviço e por pagamento</span></li>
+                    <li><i class="fas fa-check"></i> <span>Baixa automática do agendamento no caixa</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Relatórios avançados</span></li>
+                    <li><i class="fas fa-xmark"></i> <span>Destaque no catálogo</span></li>
                 </ul>
+                <a class="plan-cta solid" href="https://wa.me/5514991141057?text=Quero%20ativar%20o%20plano%20Pro" target="_blank">Assinar o Pro</a>
             </div>
+
             <div class="plan-card">
                 <div class="plan-icon"><i class="fas fa-crown"></i></div>
                 <h3 class="plan-name">Premium</h3>
+                <div class="plan-tagline">Máxima visibilidade e controle</div>
                 <div class="plan-price">R$ 39,90<small>/mês</small></div>
                 <ul class="plan-features">
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Tudo do Pro</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> <strong>Destaque no catálogo</strong></li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Relatórios avançados</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> Suporte prioritário</li>
-                    <li><i class="fas fa-check" style="color:var(--green);"></i> +100MB para portfólio</li>
+                    <li><i class="fas fa-check"></i> <span>Tudo do plano Pro</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Destaque no catálogo</strong> — selo e topo da lista</span></li>
+                    <li><i class="fas fa-check"></i> <span><strong>Relatórios avançados</strong> de faturamento</span></li>
+                    <li><i class="fas fa-check"></i> <span>Evolução mês a mês e ranking de serviços</span></li>
+                    <li><i class="fas fa-check"></i> <span>Ticket médio e taxa de conclusão</span></li>
+                    <li><i class="fas fa-check"></i> <span>Suporte prioritário</span></li>
                 </ul>
+                <a class="plan-cta ghost" href="https://wa.me/5514991141057?text=Quero%20ativar%20o%20plano%20Premium" target="_blank">Assinar o Premium</a>
             </div>
+
         </div>
         <div class="plan-footer fade-in">
-            <i class="fas fa-shield-alt"></i> Consulte o administrador para ativar seu plano.
+            <i class="fas fa-shield-halved"></i> Pagamento processado manualmente. Após a assinatura, o administrador ativa seu plano em minutos.
         </div>
     </section>
 
@@ -293,6 +308,14 @@
         <h2 id="galleryTitle">Nossos Serviços</h2>
         <p class="sub" id="gallerySub">Confira nossos trabalhos.</p>
         <div id="galleryContent"></div>
+    </div>
+</div>
+
+<!-- === MODAL UPGRADE === -->
+<div class="modal-overlay" id="upgradeModal">
+    <div class="modal" style="max-width:480px;">
+        <button class="modal-close" onclick="closeUpgradeModal()"><i class="fas fa-times"></i></button>
+        <div id="upgradeContent"></div>
     </div>
 </div>
 

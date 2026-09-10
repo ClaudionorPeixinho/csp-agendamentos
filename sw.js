@@ -1,4 +1,4 @@
-const CACHE = 'corte-certo-v2';
+const CACHE = 'corte-certo-v3';
 const urls = [
     '.',
     'index.html',

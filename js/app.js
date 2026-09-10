@@ -1,8 +1,8 @@
 const DEFAULT_DATA = {
     admin: { username: 'admin', password: 'admin123', logo: '' },
     hairdressers: [
-        { id:1, name:'Carlos Silva', specialty:'Corte Masculino & Barba', rating:4.9, bio:'Especialista em cortes masculinos e design de barba. 10 anos de experiência.', username:'carlos', password:'123', phone:'11988887777', photo:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'19:00', lunchStart:'12:00', lunchEnd:'13:30', isClosed:false, extraSlots:[], plan:'basic', portfolioEnabled:false },
-        { id:2, name:'Ana Oliveira', specialty:'Corte Feminino & Coloração', rating:4.8, bio:'Referência em coloração e cortes femininos modernos. Técnicas avançadas de mechas.', username:'ana', password:'123', phone:'11977776666', photo:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'19:00', lunchStart:'12:00', lunchEnd:'13:00', isClosed:false, extraSlots:[], plan:'basic', portfolioEnabled:false },
+        { id:1, name:'Carlos Silva', specialty:'Corte Masculino & Barba', rating:4.9, bio:'Especialista em cortes masculinos e design de barba. 10 anos de experiência.', username:'carlos', password:'123', phone:'11988887777', photo:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'19:00', lunchStart:'12:00', lunchEnd:'13:30', isClosed:false, extraSlots:[], plan:'pro', portfolioEnabled:true },
+        { id:2, name:'Ana Oliveira', specialty:'Corte Feminino & Coloração', rating:4.8, bio:'Referência em coloração e cortes femininos modernos. Técnicas avançadas de mechas.', username:'ana', password:'123', phone:'11977776666', photo:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'19:00', lunchStart:'12:00', lunchEnd:'13:00', isClosed:false, extraSlots:[], plan:'premium', portfolioEnabled:true },
         { id:3, name:'Juliana Costa', specialty:'Penteados & Escova', rating:4.9, bio:'Especialista em penteados para festas e escovas modeladoras.', username:'juliana', password:'123', phone:'11966665555', photo:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'19:00', lunchStart:'11:30', lunchEnd:'13:00', isClosed:false, extraSlots:[], plan:'basic', portfolioEnabled:false },
         { id:4, name:'Rafael Santos', specialty:'Corte Degradê & Estilo', rating:4.7, bio:'Mestre em degradê e cortes estilizados. Tendências internacionais.', username:'rafael', password:'123', phone:'11955554444', photo:'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'09:00', workEnd:'20:00', lunchStart:'12:00', lunchEnd:'13:30', isClosed:false, extraSlots:[], plan:'basic', portfolioEnabled:false },
         { id:5, name:'Fernanda Lima', specialty:'Hidratação & Tratamentos', rating:4.9, bio:'Terapeuta capilar especializada em reconstrução e hidratação.', username:'fernanda', password:'123', phone:'11944443333', photo:'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop&crop=face', gpsLink:'https://maps.google.com/?q=-23.5505,-46.6333', workStart:'08:00', workEnd:'18:00', lunchStart:'12:30', lunchEnd:'14:00', isClosed:false, extraSlots:[], plan:'basic', portfolioEnabled:false },
@@ -32,6 +32,33 @@ let DB = {};
 let currentUser = null;
 let crudContext = {};
 let loginRole = 'hairdresser';
+
+/* === PLANOS & CONTROLE DE ACESSO ===
+   Básico (grátis): apenas Agendamentos + Configurações
+   Pro: + Serviços, Galeria, Financeiro
+   Premium: + Relatórios avançados e Destaque no catálogo            */
+const PLAN_CONFIG = {
+    basic:   { label: 'Básico',  cls: 'basic',   features: ['my-appointments', 'my-config'] },
+    pro:     { label: 'Pro',     cls: 'pro',     features: ['my-appointments', 'my-config', 'my-services', 'my-portfolio', 'my-finance'] },
+    premium: { label: 'Premium', cls: 'premium', features: ['my-appointments', 'my-config', 'my-services', 'my-portfolio', 'my-finance', 'my-reports'] }
+};
+const TAB_META = {
+    'my-appointments': { icon: 'fa-calendar-check', label: 'Agendamentos' },
+    'my-services':     { icon: 'fa-scissors',       label: 'Serviços' },
+    'my-portfolio':    { icon: 'fa-images',         label: 'Galeria' },
+    'my-config':       { icon: 'fa-sliders',        label: 'Configurações' },
+    'my-finance':      { icon: 'fa-coins',          label: 'Financeiro' },
+    'my-reports':      { icon: 'fa-chart-line',     label: 'Relatórios' }
+};
+const HAIRDRESSER_TABS = ['my-appointments', 'my-services', 'my-portfolio', 'my-config', 'my-finance', 'my-reports'];
+
+function planOf(h) { return (h && PLAN_CONFIG[h.plan]) ? h.plan : 'basic'; }
+function planHasFeature(h, tab) { return PLAN_CONFIG[planOf(h)].features.includes(tab); }
+function minPlanFor(tab) {
+    if (PLAN_CONFIG.basic.features.includes(tab)) return 'basic';
+    if (PLAN_CONFIG.pro.features.includes(tab)) return 'pro';
+    return 'premium';
+}
 
 function init() {
     if (typeof initSupabase === 'function') initSupabase();
@@ -484,24 +511,30 @@ function renderDashboard() {
         switchDashTab('free-home', tabs.querySelector('.dash-tab'));
     } else {
         const h = DB.hairdressers.find(h => h.id === currentUser.id);
-        const isPro = h && (h.plan === 'pro' || h.plan === 'premium');
-        title.textContent = 'Meus Agendamentos';
-        sub.textContent = 'Bem-vindo, ' + currentUser.name + '! Plano ' + (h ? h.plan : '') + '.';
-        let tabHtml = `
-            <button class="dash-tab active" onclick="switchDashTab('my-appointments',this)"><i class="fas fa-calendar-check"></i> Agendamentos</button>
-            <button class="dash-tab" onclick="switchDashTab('my-services',this)"><i class="fas fa-cut"></i> Meus Serviços</button>
-            <button class="dash-tab" onclick="switchDashTab('my-portfolio',this)"><i class="fas fa-images"></i> Galeria</button>
-            <button class="dash-tab" onclick="switchDashTab('my-config',this)"><i class="fas fa-cog"></i> Meu Horário</button>`;
-        if (isPro) {
-            tabHtml += `
-            <button class="dash-tab" onclick="switchDashTab('my-finance',this)"><i class="fas fa-dollar-sign"></i> Financeiro</button>`;
-        }
-        tabs.innerHTML = tabHtml;
+        const plan = planOf(h);
+        const pc = PLAN_CONFIG[plan];
+        title.textContent = 'Meu Salão';
+        sub.innerHTML = 'Bem-vindo, ' + currentUser.name +
+            ' &nbsp;<span class="plan-pill ' + pc.cls + '">' +
+            (plan === 'premium' ? '<i class="fas fa-crown"></i> ' : '') +
+            'Plano ' + pc.label + '</span>';
+        tabs.innerHTML = HAIRDRESSER_TABS.map((t, i) => {
+            const m = TAB_META[t];
+            const unlocked = pc.features.includes(t);
+            if (unlocked) {
+                return `<button class="dash-tab${i === 0 ? ' active' : ''}" onclick="switchDashTab('${t}',this)"><i class="fas ${m.icon}"></i> ${m.label}</button>`;
+            }
+            return `<button class="dash-tab locked" onclick="switchDashTab('${t}',this)"><i class="fas fa-lock"></i> ${m.label}</button>`;
+        }).join('');
         switchDashTab('my-appointments', tabs.querySelector('.dash-tab'));
     }
 }
 
 function switchDashTab(tab, btn) {
+    if (currentUser && currentUser.role === 'hairdresser') {
+        const h = DB.hairdressers.find(h => h.id === currentUser.id);
+        if (!planHasFeature(h, tab)) { openUpgradeModal(tab); return; }
+    }
     document.querySelectorAll('.dash-tab').forEach(t => t.classList.remove('active'));
     btn.classList.add('active');
     if (typeof _currentTabName !== 'undefined') _currentTabName = tab;
@@ -511,11 +544,114 @@ function switchDashTab(tab, btn) {
     else if (tab === 'my-services') renderMyServices(content);
     else if (tab === 'my-config') renderMyConfig(content);
     else if (tab === 'my-finance') renderMyFinance(content);
+    else if (tab === 'my-reports') renderMyReports(content);
     else if (tab === 'my-portfolio') renderMyPortfolio(content);
     else if (tab === 'appointments') renderAdminAppointments(content);
     else if (tab === 'hairdressers') renderAdminHairdressers(content);
     else if (tab === 'admin-config') renderAdminConfig(content);
     else if (tab === 'free-home') renderFreeHome(content);
+}
+
+/* === UPGRADE / PAYWALL === */
+function openUpgradeModal(tab) {
+    const need = minPlanFor(tab);
+    const m = TAB_META[tab] || { label: 'Este recurso' };
+    const pc = PLAN_CONFIG[need];
+    const benefits = {
+        pro: [
+            'Catálogo de serviços com preços e duração',
+            'Galeria de trabalhos com compartilhamento',
+            'Financeiro completo — receitas e despesas',
+            'Faturamento por serviço e forma de pagamento'
+        ],
+        premium: [
+            'Relatórios avançados de faturamento',
+            'Evolução mês a mês e ranking de serviços',
+            'Destaque e selo dourado no catálogo',
+            'Ticket médio, taxa de conclusão e suporte prioritário'
+        ]
+    };
+    const price = need === 'pro' ? 'R$ 19,90/mês' : 'R$ 39,90/mês';
+    const wa = 'https://wa.me/5514991141057?text=' + encodeURIComponent('Olá! Quero ativar o plano ' + pc.label + ' no CORTE CERTO.');
+    document.getElementById('upgradeContent').innerHTML = `
+        <div style="text-align:center;">
+            <div style="width:74px;height:74px;border-radius:50%;background:rgba(201,162,75,.12);display:flex;align-items:center;justify-content:center;margin:4px auto 18px;font-size:1.5rem;color:var(--gold);"><i class="fas fa-lock"></i></div>
+            <h2>${m.label}: recurso do plano ${pc.label}</h2>
+            <p class="sub" style="margin-bottom:22px;">Seu plano atual é o <strong>Básico</strong>. Desbloqueie o plano <strong style="color:var(--gold-light);">${pc.label}</strong> por ${price} e tenha acesso a:</p>
+        </div>
+        <div class="lock-feat">
+            ${benefits[need].map(b => `<span><i class="fas fa-check"></i> ${b}</span>`).join('')}
+        </div>
+        <a class="btn-submit" style="display:block;text-decoration:none;" href="${wa}" target="_blank"><i class="fab fa-whatsapp"></i> Assinar o plano ${pc.label}</a>
+        <p style="text-align:center;font-size:.75rem;color:var(--text3);margin-top:14px;">Já assinou? O administrador ativa seu plano em instantes.</p>
+    `;
+    document.getElementById('upgradeModal').classList.add('open');
+    document.body.classList.add('no-scroll');
+}
+
+function closeUpgradeModal() {
+    document.getElementById('upgradeModal').classList.remove('open');
+    document.body.classList.remove('no-scroll');
+}
+document.addEventListener('click', function(e) {
+    const um = document.getElementById('upgradeModal');
+    if (um && um.classList.contains('open') && e.target === um) closeUpgradeModal();
+});
+
+/* === MY REPORTS (premium) === */
+function renderMyReports(container) {
+    const hId = currentUser.id;
+    const income = DB.transactions.filter(t => t.hairdresserId === hId && t.type === 'income');
+    const expense = DB.transactions.filter(t => t.hairdresserId === hId && t.type === 'expense');
+    const appts = DB.appointments.filter(a => a.hairdresserId === hId);
+    const completed = appts.filter(a => a.status === 'completed');
+    const cancelled = appts.filter(a => a.status === 'cancelled');
+    const totalIncome = income.reduce((s, t) => s + t.amount, 0);
+    const totalExpense = expense.reduce((s, t) => s + t.amount, 0);
+    const ticket = completed.length ? totalIncome / completed.length : 0;
+    const decided = completed.length + cancelled.length;
+    const conclusion = decided ? (completed.length / decided * 100) : 0;
+
+    const now = new Date();
+    const months = [];
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ key: d.toISOString().slice(0, 7), label: d.toLocaleDateString('pt-BR', { month: 'short' }) });
+    }
+    const monthVals = months.map(mo => ({ ...mo, val: income.filter(t => (t.date || '').startsWith(mo.key)).reduce((s, t) => s + t.amount, 0) }));
+    const maxMonth = Math.max(...monthVals.map(mo => mo.val), 1);
+
+    const svcMap = {};
+    income.forEach(t => { svcMap[t.category] = (svcMap[t.category] || 0) + t.amount; });
+    const topSvc = Object.entries(svcMap).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    const maxSvc = Math.max(...topSvc.map(s => s[1]), 1);
+
+    const card = (label, value, color) => `<div style="background:var(--card);border:1px solid var(--border-soft);border-radius:var(--rs);padding:18px;text-align:center;"><div style="font-size:.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:1px;">${label}</div><div style="font-size:1.5rem;font-weight:800;color:${color};font-family:'Playfair Display',serif;margin-top:4px;">${value}</div></div>`;
+
+    let html = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:30px;">
+      ${card('Faturamento total', 'R$ ' + totalIncome.toFixed(2), 'var(--gold-light)')}
+      ${card('Lucro líquido', 'R$ ' + (totalIncome - totalExpense).toFixed(2), (totalIncome - totalExpense) >= 0 ? 'var(--green)' : 'var(--red)')}
+      ${card('Ticket médio', 'R$ ' + ticket.toFixed(2), 'var(--gold-light)')}
+      ${card('Taxa de conclusão', conclusion.toFixed(0) + '%', 'var(--blue)')}
+    </div>
+    <h4 style="font-size:.9rem;font-weight:600;margin-bottom:16px;"><i class="fas fa-chart-column" style="color:var(--gold);"></i> Faturamento nos últimos 6 meses</h4>
+    <div style="margin-bottom:34px;">`;
+    monthVals.forEach(mo => {
+        html += `<div class="report-bar-row"><div class="report-bar-label" style="text-transform:capitalize;">${mo.label}</div><div class="report-bar-track"><div class="report-bar-fill" style="width:${(mo.val / maxMonth * 100)}%;"></div></div><div class="report-bar-val">R$ ${mo.val.toFixed(0)}</div></div>`;
+    });
+    html += `</div>`;
+
+    if (topSvc.length) {
+        html += `<h4 style="font-size:.9rem;font-weight:600;margin-bottom:16px;"><i class="fas fa-ranking-star" style="color:var(--gold);"></i> Serviços que mais faturam</h4><div>`;
+        topSvc.forEach(([name, val]) => {
+            html += `<div class="report-bar-row"><div class="report-bar-label">${name}</div><div class="report-bar-track"><div class="report-bar-fill" style="width:${(val / maxSvc * 100)}%;"></div></div><div class="report-bar-val">R$ ${val.toFixed(0)}</div></div>`;
+        });
+        html += `</div>`;
+    } else {
+        html += `<div class="empty-state"><i class="fas fa-chart-line"></i><p>Finalize agendamentos e registre receitas para gerar seus relatórios.</p></div>`;
+    }
+    container.innerHTML = html;
 }
 
 /* === MY APPOINTMENTS (hairdresser) === */
@@ -869,7 +1005,7 @@ function deleteHairdresser(id) {
 
 function updatePlan(id, plan) {
     const h = DB.hairdressers.find(h => h.id === id);
-    if (h) { h.plan = plan; saveDB(); showToast('Plano atualizado para ' + h.name + ': ' + plan, 'success'); }
+    if (h) { h.plan = plan; saveDB(); renderCatalog(); showToast('Plano de ' + h.name + ' atualizado para ' + (PLAN_CONFIG[plan] ? PLAN_CONFIG[plan].label : plan) + '.', 'success'); }
 }
 
 function togglePortfolio(id, val) {
@@ -1957,21 +2093,25 @@ function renderCatalog(filter) {
     const grid = document.getElementById('catalogGrid');
     grid.innerHTML = '';
     const f = filter || 'todos';
-    const items = f === 'todos' ? DB.hairdressers : DB.hairdressers.filter(h => h.specialty.includes(f));
+    const items = (f === 'todos' ? DB.hairdressers.slice() : DB.hairdressers.filter(h => h.specialty.includes(f)));
+    // Destaque no catálogo: profissionais Premium aparecem primeiro
+    items.sort((a, b) => (b.plan === 'premium' ? 1 : 0) - (a.plan === 'premium' ? 1 : 0));
     items.forEach((h, i) => {
         const card = document.createElement('div');
-        card.className = 'catalog-card fade-in';
+        const isPremium = h.plan === 'premium';
+        card.className = 'catalog-card fade-in' + (isPremium ? ' is-premium' : '');
         card.style.transitionDelay = i * 0.08 + 's';
         const initials = h.name.split(' ').map(n => n[0]).join('').slice(0,2);
         const hasPhoto = h.photo && h.photo.length > 10;
         const hasGps = h.gpsLink && h.gpsLink.length > 10;
         const closedBadge = h.isClosed ? '<div class="closed-badge"><i class="fas fa-door-closed"></i> Fechado</div>' : '';
+        const premBadge = isPremium ? '<div class="premium-badge"><i class="fas fa-crown"></i> Premium</div>' : '';
         const hasPortfolio = DB.portfolio.some(p => p.hairdresserId === h.id);
 
         if (hasPhoto) {
             const gpsAttr = hasGps ? 'onclick="window.open(\''+h.gpsLink+'\',\'_blank\')" title="Ver no mapa"' : '';
             card.innerHTML =
-                closedBadge +
+                closedBadge + premBadge +
                 '<div class="card-photo-banner" '+gpsAttr+'>' +
                     '<img src="'+h.photo+'" alt="'+h.name+'" onerror="this.parentElement.outerHTML=\'\'">' +
                     '<div class="photo-initials">'+initials+'</div>' +
@@ -1985,7 +2125,7 @@ function renderCatalog(filter) {
         } else {
             const avatarHtml = '<div class="card-avatar '+(hasGps?'card-avatar-clickable':'')+'" '+(hasGps?'onclick="window.open(\''+h.gpsLink+'\',\'_blank\')" title="Ver no mapa"':'')+'>'+initials+(hasGps?'<span class="gps-icon"><i class="fas fa-map-marker-alt"></i></span>':'')+'</div>';
             card.innerHTML =
-                closedBadge +
+                closedBadge + premBadge +
                 '<div class="card-top">'+avatarHtml+'<div class="card-info"><h3>'+h.name+'</h3><div class="card-specialty">'+h.specialty+'</div><div class="card-rating"><i class="fas fa-star"></i><span>'+h.rating+'</span></div></div></div>' +
                 '<div class="card-bio">'+h.bio+'</div>' +
                 '<div class="card-bottom"><div style="display:flex;gap:8px;flex-wrap:wrap;">' +
